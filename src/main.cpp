@@ -65,7 +65,6 @@ void loop() {
     speed = 3.2;
     // ============假装每秒更新一次数据==========
     tft.fillScreen(TFT_BLACK);
-    targetTime = millis()+1000;
     
     byte xpos = 6;
     byte ypos = 0;
@@ -75,7 +74,7 @@ void loop() {
 
     tft.setTextColor(TFT_GREEN); // Orange 
     xpos+= tft.drawNumber(distance,xpos,ypos,7); // Draw distance
-    xpos+= tft.drawString("KM",xpos,6,2); // Draw distance
+    xpos+= tft.drawString("KM",xpos,60,2); // Draw distance
 
     // xpos += tft.drawChar(':', xpos, ypos - 8, 8);
 
@@ -84,5 +83,6 @@ void loop() {
     tft.println(" KCL");
     tft.println("DIST:3080");
 
+    targetTime = millis()+1000;
   }
 }
