@@ -1,6 +1,8 @@
 #include <Arduino.h>
 #include <TFT_eSPI.h>
 #include <SPI.h>
+#include <car.h>
+#include <nice.h>
 
 TFT_eSPI tft = TFT_eSPI();  // Invoke library, pins defined in User_Setup.h
 uint8_t targetTime = 10;       // 目标时间 分钟
@@ -17,6 +19,17 @@ float kcl = 0;
 float speed = 0;
 float avgSpeed = 0;
 bool inited = false;
+bool finished = false;
+float pStat[256]; 
+
+
+// logo显示
+void dispLogo(){
+  tft.fillScreen(TFT_BLACK);
+  tft.setTextFont(2);
+  tft.drawCentreString("ZXQ's Fit:", tft.width()/2, tft.height()/2, 2); 
+  tft.pushImage(tft.width()/2-32,tft.height()/2-32,64,64, (uint16_t  *)gImage_bik);
+}
 
 void setup() {
   pinMode(SPIN_SENSOR_PIN, INPUT);
@@ -26,6 +39,8 @@ void setup() {
   tft.init();
   tft.setRotation(1);
   tft.fillScreen(TFT_BLACK);
+  dispLogo();
+  delay(3000);
   tft.setTextSize(1);
   tft.setTextColor(TFT_YELLOW, TFT_BLACK);
 }
@@ -50,6 +65,19 @@ void setTarget(){
   tft.fillScreen(TFT_BLACK);
 }
 
+// 打印成绩
+void dispFinish(){
+  tft.fillScreen(TFT_BLACK);
+  tft.pushImage(0, 0, 64, 64, (uint16_t  *)gImage_nice);
+  tft.setTextFont(2);
+  tft.drawString("KCL:",tft.width()/2, 0, 2); 
+  tft.drawString("TIME:",tft.width()/2, 21, 2); 
+  tft.drawString("TRAVEL:",tft.width()/2, 42, 2); 
+  tft.drawFastHLine(0, tft.height()/2, tft.width(), TFT_SKYBLUE);
+  delay(2000);
+}
+
+
 // 打印模板
 void initExec(){
   tft.fillScreen(TFT_BLACK);
@@ -63,10 +91,18 @@ void initExec(){
   inited = true;
 }
 
+
 void loop() {
+  // 是否初始化完成
   if (!inited){
     setTarget();
     initExec();
+  }
+
+  // 是否完成锻炼
+  if (finished){
+    dispFinish();
+    delay(100);
   }
 
   // laps count
@@ -132,6 +168,10 @@ void loop() {
     tft.drawString("%", 80, 110); //进度条百分比
 
     lastTime = curTime;
+
+    if (progress >= 1.00){
+      finished = true;
+    }
   }
 
   // 设定初始化完成
