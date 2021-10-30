@@ -26,17 +26,22 @@ float avgSpeed = 0;
 bool inited = false;
 bool finished = false;
 float pStat[7200]; 
+wl_status_t LAST_WIFI_STATUS;
 
 
 // logo显示
 void dispLogo(){
   tft.fillScreen(TFT_BLACK);
+  tft.pushImage(tft.width()/2-32, 32, 64, 64, (uint16_t  *)gImage_bik);
+  tft.setTextSize(1);
+  tft.setTextColor(TFT_CYAN, TFT_BLACK);
   tft.setTextFont(2);
-  tft.pushImage(tft.width()/2-32,tft.height()/2-32,64,64, (uint16_t  *)gImage_bik);
-  tft.drawString("ZXQ's Fit:", tft.width()/2, tft.height(), 2); 
+  tft.drawString("ZXQ's Fit:", 30, 0, 2); 
 }
 
 void setup() {
+  digitalWrite(SPIN_SENSOR_PIN, LOW);  
+  digitalWrite(BTN1_PIN, LOW);  
   pinMode(SPIN_SENSOR_PIN, INPUT);
   pinMode(BTN1_PIN, INPUT);
   randomSeed(analogRead(PIN_D6));
@@ -50,15 +55,13 @@ void setup() {
   // Register multi WiFi networks
   wifiMulti.addAP("Satelite", "admingyu123");
   wifiMulti.addAP("BHU", "admingyu123");
-
-
-  tft.setTextSize(1);
-  tft.setTextColor(TFT_YELLOW, TFT_BLACK);
 }
 
 // 设定运动时长,飞轮转一圈自动开始
 void setTarget(){
   tft.fillScreen(TFT_BLACK);
+  tft.setTextSize(1);
+  tft.setTextColor(TFT_YELLOW, TFT_BLACK);
   tft.setTextFont(2);
   tft.drawString("SET TARGET:",30,0,2);
   while (digitalRead(SPIN_SENSOR_PIN) == LOW){
@@ -93,13 +96,14 @@ void dispFinish(){
   tft.drawFastHLine(0, tft.height()/2, tft.width(), TFT_SKYBLUE);
 
   // 统计图
-  unsigned char i;
-  for (i=0; i<7200;i++){
-    tft.drawPixel(i*int(tft.width()/7200), pStat[i]*20, TFT_NAVY);
-  }
-  while(1){
-   delay(2000);
-  }
+  // unsigned int second = int(curTime/1000);
+  // unsigned char i;
+  // for (i=0; i<second;i++){
+  //   tft.drawPixel(i*int(tft.width()/second), pStat[i]*20, TFT_NAVY);
+  // }
+  // while(true){
+  //  delay(2000);
+  // }
 }
 
 
@@ -107,7 +111,7 @@ void dispFinish(){
 void initExec(){
   tft.fillScreen(TFT_BLACK);
   tft.setTextFont(2);
-  tft.drawString("KCL:",0,64,2); 
+  tft.drawString("KCAL:",0,64,2); 
   tft.drawString("POWER:",0,84,2); 
   // tft.drawString("POWER:",0,104,2); 
   tft.drawLine(0,60,tft.width(),60,TFT_SKYBLUE);//上下分割线
@@ -119,13 +123,17 @@ void initExec(){
 
 void loop() {
 
-  // WIFI连接
-  if (wifiMulti.run(connectTimeoutMs) == WL_CONNECTED) {
-    // gImage_wifi_on
-    tft.pushImage(tft.width()-20, 0, 20, 20, (uint16_t  *)gImage_wifi_on);
-  } else {
-    // gImage_wifi_off
-    tft.pushImage(tft.width()-20, 0, 20, 20, (uint16_t  *)gImage_wifi_off);
+  // WIFI连接状态指示
+  wl_status_t wiFiStatus = wifiMulti.run(connectTimeoutMs);
+  if (wiFiStatus != LAST_WIFI_STATUS){
+    if (wiFiStatus == WL_CONNECTED){
+      // gImage_wifi_on
+      tft.pushImage(tft.width()-20, 0, 20, 20, (uint16_t  *)gImage_wifi_on);
+    }else{
+      // gImage_wifi_off
+      tft.pushImage(tft.width()-20, 0, 20, 20, (uint16_t  *)gImage_wifi_off);
+    }
+    LAST_WIFI_STATUS = wiFiStatus;
   }
 
   // 是否初始化完成
@@ -137,8 +145,10 @@ void loop() {
   // 是否完成锻炼
   if (finished){
     dispFinish();
-    delay(100);
-    return;
+    while (digitalRead(SPIN_SENSOR_PIN) == LOW){
+      delay(500);
+    }
+    system_restart();
   }
 
   // laps count
@@ -146,8 +156,6 @@ void loop() {
   if (curSpinSensorStatus != spinSensorStatus) {
     if (curSpinSensorStatus == HIGH){
       cirCount++;
-      distance += 1;
-      kcl += 0.01;
       
     }
     // tft.println(curSpinSensorStatus);
@@ -155,14 +163,21 @@ void loop() {
   spinSensorStatus = curSpinSensorStatus;
 
   curTime =  millis();
-  if (lastTime + 1000 < curTime) {
-    // ============假装每秒更新一次数据==========
+
+  // ===========每三圈更新一次速度============
+  if (cirCount>=3){
+
+  }
+
+
+  // ============每3秒更新一次数据==========
+  if (lastTime + 3000 <= curTime) {
     distance += cirCount;
-    kcl += cirCount*0.01;
+    kcl += cirCount*0.1;
     // speed = 1000.00/(curTime-lastTime);
     speed = cirCount*12;
     pStat[int(curTime/1000)] = speed;
-    // ============假装每秒更新一次数据==========
+
 
     // 屏幕上半区域覆盖黑色
     tft.fillRect(0,0,tft.width(),59,TFT_BLACK);
